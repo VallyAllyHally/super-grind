@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monster Grind - RPG Edition</title>
+    <title>RPG Monster Grind</title>
     <style>
         body {
             background-color: #1e1e24;
@@ -31,8 +31,8 @@
             border-radius: 5px;
         }
         canvas {
-            background-color: #343440;
-            border: 3px solid #4caf50;
+            background-color: #43523d; /* Gräsmatta-färg */
+            border: 4px solid #8B4513; /* Träram runt banan */
             border-radius: 5px;
             display: block;
             margin: 0 auto;
@@ -60,6 +60,14 @@
         #game-over-screen {
             display: none;
             color: #ff4a4a;
+            background: rgba(0,0,0,0.8);
+            position: absolute;
+            top: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid red;
         }
     </style>
 </head>
@@ -71,15 +79,17 @@
         <div class="stats">
             <div>❤️ Liv: <span id="hp">100</span>/<span id="max-hp">100</span></div>
             <div>💰 Guld: <span id="gold">0</span></div>
-            <div>⚔️ Nivå: <span id="level">1</span></div>
+            <div>👾 Våg: <span id="level">1</span></div>
         </div>
 
-        <!-- Spelplanen där allt ritas ut -->
-        <canvas id="gameCanvas" width="500" height="400"></canvas>
-
-        <div id="game-over-screen">
-            <h2>💀 GAME OVER 💀</h2>
-            <button class="upgrade-btn" onclick="restartGame()" style="background-color: #ff4a4a;">Starta om</button>
+        <!-- Spelplanen -->
+        <div style="position: relative;">
+            <canvas id="gameCanvas" width="500" height="400"></canvas>
+            
+            <div id="game-over-screen">
+                <h2>💀 GAME OVER 💀</h2>
+                <button class="upgrade-btn" onclick="restartGame()" style="background-color: #ff4a4a;">Starta om</button>
+            </div>
         </div>
 
         <div class="controls-info">
@@ -93,12 +103,12 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Spelinställningar & Stats
+        // Spelare (Din gubbe)
         let player = {
             x: 250,
             y: 200,
-            size: 20,
-            speed: 4,
+            size: 15,
+            speed: 3.5,
             hp: 100,
             maxHp: 100,
             gold: 0,
@@ -112,27 +122,24 @@
         let waveLevel = 1;
         let gameOver = false;
         
-        // Uppgraderingskostnader
         let hpCost = 20;
         let dmgCost = 15;
 
-        // Tangentbords-lyssnare
+        // Tangentbordsstyrning
         let keys = {};
         window.addEventListener("keydown", (e) => { 
             keys[e.code] = true; 
             if (e.code === "Space" && !player.isAttacking && !gameOver) {
                 player.isAttacking = true;
-                player.attackTimer = 10; // Hur länge svärdet visas (frames)
+                player.attackTimer = 12; // Hur länge svärdet svingas
                 checkSwordHit();
             }
-            // Förhindra att sidan skrollar när man trycker på Space eller piltangenter
             if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
-                e.preventDefault();
+                e.preventDefault(); // Stoppar sidan från att skrolla
             }
         });
         window.addEventListener("keyup", (e) => { keys[e.code] = false; });
 
-        // Starta om spelet
         function restartGame() {
             player.hp = player.maxHp;
             player.gold = 0;
@@ -149,35 +156,32 @@
             updateUI();
         }
 
-        // Skapa fiender
         function spawnEnemies() {
             if (enemies.length === 0) {
                 let count = 2 + waveLevel;
                 for (let i = 0; i < count; i++) {
-                    // Placera fiender slumpmässigt vid kanterna
-                    let x = Math.random() > 0.5 ? 0 : canvas.width;
-                    let y = Math.random() * canvas.height;
+                    // Placera fiender utanför eller vid kanten
+                    let x = Math.random() > 0.5 ? 20 : canvas.width - 20;
+                    let y = Math.random() * (canvas.height - 40) + 20;
                     enemies.push({
                         x: x,
                         y: y,
-                        size: 16,
+                        size: 12,
                         hp: 5 + (waveLevel * 3),
-                        speed: 1 + Math.random() * 1,
-                        color: waveLevel % 2 === 0 ? "#ff9800" : "#ff4a4a"
+                        maxHp: 5 + (waveLevel * 3),
+                        speed: 0.8 + (waveLevel * 0.1)
                     });
                 }
+                document.getElementById("level").innerText = waveLevel;
                 waveLevel++;
-                document.getElementById("level").innerText = waveLevel - 1;
             }
         }
 
-        // Kolla om svärdet träffar en fiende
         function checkSwordHit() {
             let swordX = player.x;
             let swordY = player.y;
-            let range = 35;
+            let range = 30;
 
-            // Räkna ut var svärdet träffar baserat på håll man går
             if (player.direction === 'right') swordX += range;
             if (player.direction === 'left') swordX -= range;
             if (player.direction === 'up') swordY -= range;
@@ -187,14 +191,14 @@
                 let enemy = enemies[i];
                 let dist = Math.hypot(swordX - enemy.x, swordY - enemy.y);
                 
-                // Om fienden är nära svärds-träffen
-                if (dist < enemy.size + 20) {
+                if (dist < enemy.size + 25) {
                     enemy.hp -= player.damage;
-                    // Putta tillbaka fienden lite vid träff
-                    if (player.direction === 'right') enemy.x += 20;
-                    if (player.direction === 'left') enemy.x -= 20;
-                    if (player.direction === 'up') enemy.y -= 20;
-                    if (player.direction === 'down') enemy.y += 20;
+                    
+                    // Knockback (skjut tillbaka fienden)
+                    if (player.direction === 'right') enemy.x += 30;
+                    if (player.direction === 'left') enemy.x -= 30;
+                    if (player.direction === 'up') enemy.y -= 30;
+                    if (player.direction === 'down') enemy.y += 30;
 
                     if (enemy.hp <= 0) {
                         enemies.splice(i, 1);
@@ -205,12 +209,11 @@
             updateUI();
         }
 
-        // Köp Uppgraderingar
         function buyMaxHp() {
             if (player.gold >= hpCost) {
                 player.gold -= hpCost;
                 player.maxHp += 20;
-                player.hp = player.maxHp; // Heala till max
+                player.hp = player.maxHp;
                 hpCost = Math.floor(hpCost * 1.5);
                 updateUI();
             }
@@ -236,39 +239,40 @@
             document.getElementById("buy-dmg-btn").disabled = player.gold < dmgCost;
         }
 
-        // Huvudloopen som ritar och uppdaterar spelet (körs ca 60 gånger per sekund)
+        // Här ritar vi spelet
         function gameLoop() {
             if (gameOver) return;
 
             // 1. Rensa skärmen
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Flytta spelaren
+            // 2. Flytta gubben baserat på knappar
             if (keys["KeyW"] || keys["ArrowUp"]) { player.y -= player.speed; player.direction = 'up'; }
             if (keys["KeyS"] || keys["ArrowDown"]) { player.y += player.speed; player.direction = 'down'; }
             if (keys["KeyA"] || keys["ArrowLeft"]) { player.x -= player.speed; player.direction = 'left'; }
             if (keys["KeyD"] || keys["ArrowRight"]) { player.x += player.speed; player.direction = 'right'; }
 
-            // Håll spelaren inom skärmen
-            player.x = Math.max(0, Math.min(canvas.width, player.x));
-            player.y = Math.max(0, Math.min(canvas.height, player.y));
+            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
             // 3. Hantera fiender
             spawnEnemies();
             
-            enemies.forEach((enemy) => {
-                // Fiender rör sig mot spelaren
+            enemies.forEach((enemy, index) => {
+                // Gå mot spelaren
                 let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
                 enemy.x += Math.cos(angle) * enemy.speed;
                 enemy.y += Math.sin(angle) * enemy.speed;
 
-                // Rita fiende (Röda bollar)
-                ctx.fillStyle = enemy.color;
+                // RITA FIENDE (Ett rött monster med ögon)
+                ctx.fillStyle = "#a62c2c";
                 ctx.beginPath();
                 ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
                 ctx.fill();
+                // Ögon på monstret
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(enemy.x - 4, enemy.y - 5, 3, 3);
+                ctx.fillRect(enemy.x + 2, enemy.y - 5, 3, 3);
 
-                // Kolla krock med spelaren (Fienden skadar spelaren)
-                let dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (dist < player.size + enemy.size) {
-                    player.hp -= 0.5; // Skada per frame
+                // Fiendens livmätare
+                ctx.fillStyle = "red";
