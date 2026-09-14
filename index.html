@@ -3,278 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG Monster Grind</title>
+    <title>Monster Defender - Side Scroller</title>
     <style>
         body {
-            background-color: #1e1e24;
+            background-color: #1a1a1a;
             color: #fff;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             text-align: center;
             margin: 0;
             padding: 20px;
+            user-select: none;
         }
         .game-container {
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
-            background-color: #2a2a35;
+            background-color: #26262b;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
-        .stats {
+        .stats-bar {
             display: flex;
             justify-content: space-around;
-            background: #1a1a20;
-            padding: 10px;
+            background: #111;
+            padding: 12px;
             margin-bottom: 15px;
-            border-radius: 5px;
+            border-radius: 6px;
             font-size: 1.1rem;
+            font-weight: bold;
         }
-        /* Spelplanen - Gräsmatta */
-        #game-board {
-            width: 500px;
-            height: 400px;
-            background-color: #43523d;
-            border: 4px solid #8B4513;
-            margin: 0 auto;
-            position: relative; /* VIKTIGT: Gör så att saker kan flyttas inuti rutan */
+        /* Spelplanen - Sida till sida */
+        #game-arena {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(to bottom, #1f2d3d, #2c3e50);
+            border-bottom: 20px solid #553311; /* Mark/Jord */
+            position: relative;
             overflow: hidden;
+            cursor: crosshair; /* Sikte när man håller musen över */
+            border-radius: 6px 6px 0 0;
         }
-        /* SPELAREN (Din gubbe) */
-        #player {
-            width: 32px;
-            height: 32px;
+        /* DIN GUBBE */
+        #hero {
+            width: 40px;
+            height: 50px;
             position: absolute;
-            font-size: 24px;
-            line-height: 32px;
+            bottom: 0;
+            left: 50px;
+            font-size: 32px;
+            line-height: 50px;
             text-align: center;
-            left: 235px; /* Startar i mitten */
-            top: 185px;  /* Startar i mitten */
             z-index: 10;
         }
-        /* SVÄRDET */
-        #sword {
+        /* MONSTER */
+        .monster {
+            width: 35px;
+            height: 35px;
             position: absolute;
-            font-size: 24px;
-            display: none;
-            z-index: 11;
-        }
-        /* FIENDER (Slimes och monster) */
-        .enemy {
-            width: 30px;
-            height: 30px;
-            position: absolute;
-            font-size: 22px;
-            line-height: 30px;
+            bottom: 0;
+            font-size: 28px;
+            line-height: 35px;
             text-align: center;
             z-index: 5;
+            transition: transform 0.1s;
         }
-        /* PILAR */
-        .projectile {
-            width: 10px;
-            height: 10px;
-            background-color: #ffeb3b;
-            border-radius: 50%;
+        /* SKOTT / PILAR */
+        .laser {
+            width: 12px;
+            height: 6px;
+            background-color: #00ffcc;
             position: absolute;
-            z-index: 4;
-            box-shadow: 0 0 5px yellow;
+            border-radius: 3px;
+            z-index: 8;
+            box-shadow: 0 0 8px #00ffcc;
         }
-        .upgrade-btn {
-            background-color: #4caf50;
+        /* SHOP & UPGRADES */
+        .shop-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            background: #1c1c21;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .upgrade-card {
+            background: #333;
+            padding: 10px;
+            border-radius: 6px;
+            width: 45%;
+        }
+        .btn {
+            background-color: #ff9800;
             color: white;
             border: none;
-            padding: 10px 15px;
-            margin: 10px 5px;
+            padding: 10px 18px;
+            font-size: 1rem;
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
         }
-        .upgrade-btn:disabled { background-color: #555; }
-        #game-over {
+        .btn:hover { background-color: #e68a00; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; }
+        
+        #game-over-menu {
             display: none;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9);
-            padding: 30px;
-            border: 3px solid red;
-            border-radius: 10px;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
             z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
 <body>
 
     <div class="game-container">
-        <h1>⚔️ RPG Monster Grind ⚔️</h1>
+        <h1>🏹 Monster Defender ⚔️</h1>
         
-        <div class="stats">
-            <div>❤️ Liv: <span id="hp">100</span>/<span id="max-hp">100</span></div>
-            <div>💰 Guld: <span id="gold">0</span></div>
-            <div>👾 Våg: <span id="level">1</span></div>
+        <div class="stats-bar">
+            <div>❤️ Liv: <span id="hp-display">100</span>/%</div>
+            <div>💰 Guld: <span id="gold-display">0</span></div>
+            <div>🧟 Våg: <span id="wave-display">1</span></div>
         </div>
 
-        <div id="game-board">
-            <!-- Gubben hamnar nu i mitten direkt från start -->
-            <div id="player" style="left: 235px; top: 185px;">🧑‍🌾</div>
-            <!-- Svärdet -->
-            <div id="sword">⚔️</div>
+        <!-- Spelplanen -->
+        <div id="game-arena">
+            <div id="hero">🧑‍🌾</div>
             
-            <div id="game-over">
-                <h2>💀 GAME OVER 💀</h2>
-                <button class="upgrade-btn" onclick="location.reload()">Starta om</button>
+            <div id="game-over-menu">
+                <h2 style="color: #ff3333; font-size: 2.5rem; margin: 0;">💀 BASE DESTROYED 💀</h2>
+                <p>Monstren bröt igenom försvaret!</p>
+                <button class="btn" onclick="location.reload()" style="max-width: 200px; background-color: #ff3333;">Försök igen</button>
             </div>
         </div>
 
-        <p style="color: #bbb; font-size: 0.9rem;">🕹️ Gå med <strong>Piltangenterna</strong> / <strong>WASD</strong>. Slå med <strong>Mellanslag (Space)</strong>!</p>
-        
-        <button id="buy-hp" class="upgrade-btn" onclick="buyHp()">Mer Max-HP (+20) | 💰 <span id="hp-cost">20</span>g</button>
-        <button id="buy-dmg" class="upgrade-btn" onclick="buyDmg()">Starkare Svärd (+3) | 💰 <span id="dmg-cost">15</span>g</button>
+        <p style="color: #aaa; font-size: 0.9rem; margin-top: 10px;">
+            🕹️ <strong>Gå:</strong> <kbd>A</kbd> / <kbd>D</kbd> eller <strong>Vänster/Höger Piltangent</strong>. 
+            🎯 <strong>Skjut:</strong> <strong>KLICKA</strong> med musen var som helst på spelskärmen!
+        </p>
+
+        <!-- Uppgraderingar -->
+        <div class="shop-container">
+            <div class="upgrade-card">
+                <h3>🏹 Vapenhastighet</h3>
+                <p>Skjut mycket snabbare</p>
+                <button id="up-speed-btn" class="btn" onclick="upgradeSpeed()">Köp för 💰 <span id="speed-cost">25</span>g</button>
+            </div>
+            <div class="upgrade-card">
+                <h3>💥 Pilskada (DMG)</h3>
+                <p>Nuvarande skada: <span id="dmg-display">5</span></p>
+                <button id="up-dmg-btn" class="btn" onclick="upgradeDmg()">Köp för 💰 <span id="dmg-cost">20</span>g</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Startpositioner i mitten av den 500x400 stora banan
-        let pX = 235, pY = 185;
-        let pHp = 100, pMaxHp = 100, pGold = 0, pDmg = 5;
-        let wave = 1, hpCost = 20, dmgCost = 15;
-        let isAttacking = false;
-        let direction = 'right';
-        let enemies = [];
-        let projectiles = [];
-        let keys = {};
+        // Spelvariabler
+        let heroX = 80;
+        let heroHp = 100;
+        let gold = 0;
+        let damage = 5;
+        let attackSpeed = 400; // Millisekunder mellan skott (lägre = snabbare)
+        let lastShotTime = 0;
 
-        const board = document.getElementById('game-board');
-        const playerEl = document.getElementById('player');
-        const swordEl = document.getElementById('sword');
+        let wave = 1;
+        let monsters = [];
+        let playerProjectiles = [];
+        let activeKeys = {};
+        let isDead = false;
 
-        // Kontroller för att trycka ner tangenter
-        window.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            if (e.code === 'Space' && !isAttacking) {
-                attack();
-            }
-            if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
-        });
-        
-        // När man släpper tangenten
-        window.addEventListener('keyup', (e) => { 
-            keys[e.code] = false; 
-        });
+        let costSpeed = 25;
+        let costDmg = 20;
 
-        // Svärdsattack
-        function attack() {
-            isAttacking = true;
-            swordEl.style.display = 'block';
+        const arena = document.getElementById('game-arena');
+        const heroEl = document.getElementById('hero');
+
+        // Hantera tangentbords-tryck för att gå höger/vänster
+        window.addEventListener('keydown', (e) => { activeKeys[e.code] = true; });
+        window.addEventListener('keyup', (e) => { activeKeys[e.code] = false; });
+
+        // KLICKA PÅ SKÄRMEN FÖR ATT SKJUTA MÅLSÖKANDE/RIKTADE SKOTT
+        arena.addEventListener('mousedown', (e) => {
+            if (isDead) return;
             
-            let sX = pX, sY = pY;
-            if (direction === 'right') { sX += 28; sY += 2; }
-            if (direction === 'left') { sX -= 24; sY += 2; }
-            if (direction === 'up') { sX += 2; sY -= 24; }
-            if (direction === 'down') { sX += 2; sY += 28; }
+            let currentTime = Date.now();
+            if (currentTime - lastShotTime < attackSpeed) return; // Attack speed spärr
+            lastShotTime = currentTime;
+
+            // Räkna ut klickpositionen inuti spelarenan
+            let rect = arena.getBoundingClientRect();
+            let clickX = e.clientX - rect.left;
+            let clickY = e.clientY - rect.top;
+
+            // Skapa skottet
+            let laser = document.createElement('div');
+            laser.className = 'laser';
             
-            swordEl.style.left = sX + 'px';
-            swordEl.style.top = sY + 'px';
+            // Startposition vid gubben
+            let startX = heroX + 25;
+            let startY = 260; // Höjd vid gubbens hand
+            laser.style.left = startX + 'px';
+            laser.style.top = startY + 'px';
+            arena.appendChild(laser);
 
-            // Kolla om svärdet träffar fiender
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                let en = enemies[i];
-                let dist = Math.hypot(sX - en.x, sY - en.y);
-                if (dist < 35) {
-                    en.hp -= pDmg;
-                    if (en.hp <= 0) {
-                        en.el.remove();
-                        enemies.splice(i, 1);
-                        pGold += 5;
-                    }
-                }
-            }
+            // Räkna ut vinkeln/riktningen till där man klickade
+            let angle = Math.atan2(clickY - startY, clickX - startX);
 
-            setTimeout(() => {
-                swordEl.style.display = 'none';
-                isAttacking = false;
-                updateUI();
-            }, 150);
-        }
+            playerProjectiles.push({
+                el: laser,
+                x: startX,
+                y: startY,
+                speed: 7,
+                cos: Math.cos(angle),
+                sin: Math.sin(angle)
+            });
+        });
 
-        // Skapa fiender (Gröna Slimes 🤢, Monster 👹 och Bågskyttar 🏹)
-        function spawnEnemies() {
-            if (enemies.length === 0) {
-                let count = 2 + wave;
+        // Skapa monster-vågor från höger sida
+        function spawnMonsterWave() {
+            if (monsters.length === 0 && !isDead) {
+                let count = 3 + wave;
                 for (let i = 0; i < count; i++) {
-                    let el = document.createElement('div');
-                    el.className = 'enemy';
+                    let mEl = document.createElement('div');
+                    mEl.className = 'monster';
                     
-                    // Slumpa fram 3 olika sorters fiender!
-                    let rand = Math.random();
-                    let isArcher = false;
-                    let isSlime = false;
+                    // Slumpa monster-typ (Grön slime eller rött monster)
+                    let isSlime = Math.random() > 0.4;
+                    mEl.innerText = isSlime ? '🤢' : '👹';
 
-                    if (rand < 0.4) {
-                        el.innerText = '🤢'; // Slime!
-                        isSlime = true;
-                    } else if (rand < 0.7) {
-                        el.innerText = '👹'; // Vanligt monster
-                    } else {
-                        el.innerText = '🏹'; // Bågskytt
-                        isArcher = true;
-                    }
+                    // Starta utspritt långt till höger utanför skärmen
+                    let startX = 720 + (i * 60) + Math.random() * 30;
+                    mEl.style.left = startX + 'px';
+                    mEl.style.bottom = '0px';
+                    arena.appendChild(mEl);
 
-                    // Placera ut dem längs kanterna så de inte spawnar direkt på spelaren
-                    let x = Math.random() > 0.5 ? 15 : 455;
-                    let y = Math.random() * 330 + 30;
-                    
-                    el.style.left = x + 'px';
-                    el.style.top = y + 'px';
-                    board.appendChild(el);
-
-                    enemies.push({
-                        el: el, x: x, y: y,
-                        hp: isSlime ? 4 + wave : 6 + (wave * 2),
-                        isArcher: isArcher,
-                        isSlime: isSlime,
-                        speed: isSlime ? 0.7 : 1.2, // Slimes rör sig lite långsammare
-                        shootCooldown: Math.random() * 50 + 40
+                    monsters.push({
+                        el: mEl,
+                        x: startX,
+                        hp: isSlime ? 4 + (wave * 2) : 10 + (wave * 3),
+                        speed: isSlime ? 0.9 + (wave * 0.05) : 1.4 + (wave * 0.05),
+                        isSlime: isSlime
                     });
                 }
-                document.getElementById('level').innerText = wave;
+                document.getElementById('wave-display').innerText = wave;
                 wave++;
             }
         }
 
-        function buyHp() {
-            if (pGold >= hpCost) { pGold -= hpCost; pMaxHp += 20; pHp = pMaxHp; hpCost = Math.floor(hpCost*1.5); updateUI(); }
+        // Uppgradering: Skjut snabbare
+        function upgradeSpeed() {
+            if (gold >= costSpeed && attackSpeed > 100) {
+                gold -= costSpeed;
+                attackSpeed -= 50; // Sänker fördröjningen = skjuter snabbare
+                costSpeed = Math.floor(costSpeed * 1.6);
+                updateUI();
+            }
         }
-        function buyDmg() {
-            if (pGold >= dmgCost) { pGold -= dmgCost; pDmg += 3; dmgCost = Math.floor(dmgCost*1.6); updateUI(); }
+
+        // Uppgradering: Mer skada
+        function upgradeDmg() {
+            if (gold >= costDmg) {
+                gold -= costDmg;
+                damage += 4;
+                costDmg = Math.floor(costDmg * 1.5);
+                updateUI();
+            }
         }
 
         function updateUI() {
-            document.getElementById('hp').innerText = Math.round(pHp);
-            document.getElementById('max-hp').innerText = pMaxHp;
-            document.getElementById('gold').innerText = pGold;
-            document.getElementById('hp-cost').innerText = hpCost;
-            document.getElementById('dmg-cost').innerText = dmgCost;
-            document.getElementById('buy-hp').disabled = pGold < hpCost;
-            document.getElementById('buy-dmg').disabled = pGold < dmgCost;
-        }
+            document.getElementById('gold-display').innerText = gold;
+            document.getElementById('hp-display').innerText = Math.max(0, heroHp);
+            document.getElementById('dmg-display').innerText = damage;
+            document.getElementById('speed-cost').innerText = costSpeed;
+            document.getElementById('dmg-cost').innerText = costDmg;
 
-        // Spelloopen som uppdaterar rörelser hela tiden
-        function updateGame() {
-            if (pHp <= 0) {
-                document.getElementById('game-over').style.display = 'block';
-                return;
-            }
-
-            // Gå-hastighet
-            let speed = 4;
-            if (keys['KeyW'] || keys['ArrowUp']) { pY -= speed; direction = 'up'; }
-            if (keys['KeyS'] || keys['ArrowDown']) { pY += speed; direction = 'down'; }
-            if (keys['KeyA'] || keys['ArrowLeft']) { pX -= speed; direction = 'left'; }
-            if (keys['KeyD'] || keys['ArrowRight']) { pX += speed; direction = 'right'; }
-
-            // Stoppa gubben så den inte går utanför banan
-            pX = Math.max(0, Math.min(468, pX));
-            pY = Math.max(0, Math.min(368, pY));
+            document.getElementById('up-speed-btn').disabled = gold < costSpeed || attackSpeed <= 100;
+            document.getElementById('up-dmg-btn').disabled = gold < costDmg;
             
-            // Flytta gubben på skärmen
-            playerEl.style.left = pX + 'px';
+            if (attackSpeed <= 100) {
