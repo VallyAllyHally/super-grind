@@ -1,291 +1,44 @@
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monster Defender - Side Scroller</title>
-    <style>
-        body {
-            background-color: #1e1e24;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            user-select: none;
-        }
-        .game-container {
-            max-width: 650px;
-            margin: 0 auto;
-            background-color: #2a2a35;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .stats-bar {
-            display: flex;
-            justify-content: space-around;
-            background: #1a1a20;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 6px;
-            font-size: 1.1rem;
-        }
-        /* Spelplanen - Sida till sida */
-        #game-arena {
-            width: 100%;
-            height: 300px;
-            background: #43523d; /* Fast, stabil grön färg */
-            border-bottom: 25px solid #5a3d28; /* Träbana/Mark i botten */
-            position: relative;
-            overflow: hidden;
-            border-radius: 6px;
-        }
-        /* GUBBEN */
-        #hero {
-            width: 40px;
-            height: 50px;
-            position: absolute;
-            bottom: 0px; /* Står direkt på marken */
-            left: 50px;
-            font-size: 35px;
-            line-height: 50px;
-            z-index: 100;
-        }
-        /* MONSTER (Slimes och orker) */
-        .monster {
-            width: 40px;
-            height: 40px;
-            position: absolute;
-            bottom: 0px;
-            font-size: 32px;
-            line-height: 40px;
-            z-index: 50;
-        }
-        /* SKOTT (Stora lysande gula bollar) */
-        .projectile {
-            width: 16px;
-            height: 16px;
-            background-color: #ffcc00;
-            position: absolute;
-            border-radius: 50%;
-            z-index: 80;
-            box-shadow: 0 0 10px #ff3300, 0 0 5px #ffcc00;
-        }
-        /* UPGRADES OCH START */
-        .control-panel {
-            margin-top: 15px;
-            background: #1a1a20;
-            padding: 15px;
-            border-radius: 8px;
-        }
-        .btn {
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        .btn:hover { background-color: #45a049; }
-        .btn:disabled { background-color: #555; cursor: not-allowed; }
-        .start-btn {
-            background-color: #ff9800;
-            font-size: 1.2rem;
-            width: 90%;
-            display: block;
-            margin: 10px auto;
-        }
-        .start-btn:hover { background-color: #e68a00; }
-        
-        #game-over-screen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 1000;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-    </style>
-</head>
-<body>
+// Konfiguration för spelet
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+    scene: { preload, create, update }
+};
 
-    <div class="game-container">
-        <h1>🏹 Side-Scroller Monster Defender ⚔️</h1>
-        
-        <div class="stats-bar">
-            <div>❤️ Liv: <span id="hp">100</span>/100</div>
-            <div>💰 Guld: <span id="gold">0</span></div>
-            <div>🧟 Våg: <span id="level">0</span></div>
-        </div>
+const game = new Phaser.Game(config);
+let player, cursors, bullets, slimes, score = 0, damage = 1;
 
-        <!-- Spelplanen -->
-        <div id="game-arena">
-            <div id="hero">🧑‍🌾</div>
-            
-            <div id="game-over-screen">
-                <h2 style="color: #ff3333; font-size: 2.5rem; margin: 0;">💀 GAME OVER 💀</h2>
-                <p>Monstren tog sig förbi dig!</p>
-                <button class="btn" onclick="location.reload()" style="background-color: #ff3333;">Starta om</button>
-            </div>
-        </div>
+function preload() {
+    // Ladda bilder här (placeholder-färger används om du inte har bilder)
+}
 
-        <!-- Startknappen för vågor -->
-        <button id="start-wave-btn" class="btn start-btn" onclick="startNextWave()">👉 STARTA NÄSTA VÅG 👈</button>
+function create() {
+    player = this.add.rectangle(400, 500, 30, 30, 0xff0000);
+    this.physics.add.existing(player);
+    cursors = this.input.keyboard.createCursorKeys();
+    bullets = this.physics.add.group();
+    slimes = this.physics.add.group();
 
-        <p style="color: #bbb; font-size: 0.9rem;">
-            🕹️ <strong>Gå:</strong> <kbd>A</kbd> / <kbd>D</kbd> eller piltangenterna. 
-            🎯 <strong>Skjut:</strong> <strong>KLICKA var som helst i den gröna rutan</strong> för att skjuta!
-        </p>
+    // Knapp för att starta våg
+    let btn = this.add.text(20, 20, 'Start Wave', { fill: '#0f0' }).setInteractive();
+    btn.on('pointerdown', () => spawnWave(this));
+}
 
-        <!-- Shopen -->
-        <div class="control-panel">
-            <h3>Uppgraderingar 🛒</h3>
-            <button id="buy-dmg-btn" class="btn" onclick="buyDamage()">💥 Mer Skada (+3 DMG) | Kostnad: <span id="dmg-cost">15</span>g</button>
-            <button id="buy-hp-btn" class="btn" onclick="buyHp()">❤️ Heala basen till Max | Kostnad: <span id="hp-cost">20</span>g</button>
-            <p style="font-size: 0.85rem; color: #aaa; margin: 5px 0 0 0;">Nuvarande skada: <span id="current-dmg">5</span></p>
-        </div>
-    </div>
+function update() {
+    if (cursors.left.isDown) player.x -= 5;
+    else if (cursors.right.isDown) player.x += 5;
+    
+    if (Phaser.Input.Keyboard.JustDown(cursors.space)) {
+        let bullet = bullets.create(player.x, player.y, null).setSize(10, 10);
+        bullet.body.velocity.y = -400;
+    }
+}
 
-    <script>
-        // Speldata
-        let heroX = 60;
-        let heroHp = 100;
-        let gold = 0;
-        let damage = 5;
-        let waveLevel = 0;
-        let waveActive = false;
-
-        let monsters = [];
-        let projectiles = [];
-        let keys = {};
-        let gameOver = false;
-
-        let dmgCost = 15;
-        let hpCost = 20;
-
-        const arena = document.getElementById('game-arena');
-        const heroEl = document.getElementById('hero');
-        const startBtn = document.getElementById('start-wave-btn');
-
-        // Knappar för rörelse
-        window.addEventListener('keydown', (e) => { keys[e.code] = true; });
-        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-        // KLICKA PÅ SKÄRMEN FÖR ATT SKJUTA ELDKLOT
-        arena.addEventListener('click', (e) => {
-            if (gameOver) return;
-
-            // Räkna ut exakt var musen klickade inuti den gröna rutan
-            let rect = arena.getBoundingClientRect();
-            let clickX = e.clientX - rect.left;
-            let clickY = e.clientY - rect.top;
-
-            // Skapa ett eldklot-element
-            let pEl = document.createElement('div');
-            pEl.className = 'projectile';
-            
-            // Starta vid gubbens position
-            let startX = heroX + 30;
-            let startY = 225; // Höjd i linje med gubbens överkropp
-            
-            pEl.style.left = startX + 'px';
-            pEl.style.top = startY + 'px';
-            arena.appendChild(pEl);
-
-            // Räkna ut vinkeln/riktningen från gubben till klicket
-            let angle = Math.atan2(clickY - startY, clickX - startX);
-
-            projectiles.push({
-                el: pEl,
-                x: startX,
-                y: startY,
-                vx: Math.cos(angle) * 8, // Hastighet i X-led
-                vy: Math.sin(angle) * 8  // Hastighet i Y-led
-            });
-        });
-
-        // MANUELL STARTKNAPP FÖR VÅGORNA
-        function startNextWave() {
-            if (waveActive || gameOver) return;
-            
-            waveLevel++;
-            waveActive = true;
-            startBtn.disabled = true;
-            startBtn.innerText = "💥 VÅG PÅGÅR... 💥";
-            document.getElementById('level').innerText = waveLevel;
-
-            // Skapa monster baserat på vilken våg man är på
-            let monsterCount = 3 + waveLevel;
-            for (let i = 0; i < monsterCount; i++) {
-                let mEl = document.createElement('div');
-                mEl.className = 'monster';
-                
-                // Vartannat monster blir en grön slime 🤢 och vartannat en ork 👹
-                let isSlime = i % 2 === 0;
-                mEl.innerText = isSlime ? '🤢' : '👹';
-
-                // Radera ut monstren efter varandra utanför högerkanten
-                let startX = arena.clientWidth + (i * 70) + Math.random() * 20;
-                mEl.style.left = startX + 'px';
-                mEl.style.bottom = '0px';
-                arena.appendChild(mEl);
-
-                monsters.push({
-                    el: mEl,
-                    x: startX,
-                    hp: isSlime ? 4 + (waveLevel * 2) : 10 + (waveLevel * 3),
-                    speed: isSlime ? 1.0 + (waveLevel * 0.05) : 1.5 + (waveLevel * 0.05),
-                    isSlime: isSlime
-                });
-            }
-        }
-
-        // Shopfunktioner
-        function buyDamage() {
-            if (gold >= dmgCost) {
-                gold -= dmgCost;
-                damage += 3;
-                dmgCost = Math.floor(dmgCost * 1.6);
-                updateUI();
-            }
-        }
-
-        function buyHp() {
-            if (gold >= hpCost) {
-                gold -= hpCost;
-                heroHp = 100; // Återställ liv till max
-                hpCost = Math.floor(hpCost * 1.4);
-                updateUI();
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('gold').innerText = gold;
-            document.getElementById('hp').innerText = Math.max(0, heroHp);
-            document.getElementById('current-dmg').innerText = damage;
-            document.getElementById('dmg-cost').innerText = dmgCost;
-            document.getElementById('hp-cost').innerText = hpCost;
-
-            document.getElementById('buy-dmg-btn').disabled = gold < dmgCost;
-            document.getElementById('buy-hp-btn').disabled = gold < hpCost;
-        }
-
-        // SPELMOTORN (Körs 60 gånger per sekund)
-        function updateLoop() {
-            if (gameOver) return;
-
-            // 1. Flytta hjälten (A/D eller Piltangenter)
-            let arenaWidth = arena.clientWidth;
-            if (keys['KeyA'] || keys['ArrowLeft']) {
-                heroX -= 4.5;
-            }
-            if (keys['KeyD'] || keys['ArrowRight']) {
-                heroX += 4.5;
-            }
-            // Håll gubben på spelplanen
+function spawnWave(scene) {
+    for(let i = 0; i < 5; i++) {
+        let s = slimes.create(Math.random() * 800, 50, 20, 20);
+        s.body.velocity.y = 50;
+    }
+}
