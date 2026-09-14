@@ -31,8 +31,8 @@
             border-radius: 5px;
         }
         canvas {
-            background-color: #43523d; /* Gräsmatta-färg */
-            border: 4px solid #8B4513; /* Träram runt banan */
+            background-color: #43523d; 
+            border: 4px solid #8B4513; 
             border-radius: 5px;
             display: block;
             margin: 0 auto;
@@ -62,12 +62,13 @@
             color: #ff4a4a;
             background: rgba(0,0,0,0.8);
             position: absolute;
-            top: 200px;
+            top: 150px;
             left: 50%;
             transform: translateX(-50%);
             padding: 20px;
             border-radius: 10px;
             border: 2px solid red;
+            z-index: 10;
         }
     </style>
 </head>
@@ -82,7 +83,6 @@
             <div>👾 Våg: <span id="level">1</span></div>
         </div>
 
-        <!-- Spelplanen -->
         <div style="position: relative;">
             <canvas id="gameCanvas" width="500" height="400"></canvas>
             
@@ -100,45 +100,56 @@
     </div>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        // Deklarera variabler globalt
+        let canvas, ctx;
+        let player, enemies, waveLevel, gameOver, keys, hpCost, dmgCost;
 
-        // Spelare (Din gubbe)
-        let player = {
-            x: 250,
-            y: 200,
-            size: 15,
-            speed: 3.5,
-            hp: 100,
-            maxHp: 100,
-            gold: 0,
-            damage: 5,
-            isAttacking: false,
-            attackTimer: 0,
-            direction: 'right'
+        // Denna funktion körs först när HELA sidan har laddats in i webbläsaren
+        window.onload = function() {
+            canvas = document.getElementById("gameCanvas");
+            ctx = canvas.getContext("2d");
+
+            // Nollställ all speldata vid start
+            player = {
+                x: 250,
+                y: 200,
+                size: 15,
+                speed: 3.5,
+                hp: 100,
+                maxHp: 100,
+                gold: 0,
+                damage: 5,
+                isAttacking: false,
+                attackTimer: 0,
+                direction: 'right'
+            };
+
+            enemies = [];
+            waveLevel = 1;
+            gameOver = false;
+            keys = {};
+            hpCost = 20;
+            dmgCost = 15;
+
+            // Starta lyssnare för tangentbordet
+            window.addEventListener("keydown", (e) => { 
+                keys[e.code] = true; 
+                if (e.code === "Space" && !player.isAttacking && !gameOver) {
+                    player.isAttacking = true;
+                    player.attackTimer = 12;
+                    checkSwordHit();
+                }
+                if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                    e.preventDefault(); 
+                }
+            });
+            window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+
+            // Starta spelfunktionerna efter att allt har laddats
+            spawnEnemies();
+            updateUI();
+            gameLoop();
         };
-
-        let enemies = [];
-        let waveLevel = 1;
-        let gameOver = false;
-        
-        let hpCost = 20;
-        let dmgCost = 15;
-
-        // Tangentbordsstyrning
-        let keys = {};
-        window.addEventListener("keydown", (e) => { 
-            keys[e.code] = true; 
-            if (e.code === "Space" && !player.isAttacking && !gameOver) {
-                player.isAttacking = true;
-                player.attackTimer = 12; // Hur länge svärdet svingas
-                checkSwordHit();
-            }
-            if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
-                e.preventDefault(); // Stoppar sidan från att skrolla
-            }
-        });
-        window.addEventListener("keyup", (e) => { keys[e.code] = false; });
 
         function restartGame() {
             player.hp = player.maxHp;
@@ -154,15 +165,15 @@
             document.getElementById("game-over-screen").style.display = "none";
             spawnEnemies();
             updateUI();
+            gameLoop();
         }
 
         function spawnEnemies() {
             if (enemies.length === 0) {
                 let count = 2 + waveLevel;
                 for (let i = 0; i < count; i++) {
-                    // Placera fiender utanför eller vid kanten
-                    let x = Math.random() > 0.5 ? 20 : canvas.width - 20;
-                    let y = Math.random() * (canvas.height - 40) + 20;
+                    let x = Math.random() > 0.5 ? 30 : canvas.width - 30;
+                    let y = Math.random() * (canvas.height - 60) + 30;
                     enemies.push({
                         x: x,
                         y: y,
@@ -194,11 +205,10 @@
                 if (dist < enemy.size + 25) {
                     enemy.hp -= player.damage;
                     
-                    // Knockback (skjut tillbaka fienden)
-                    if (player.direction === 'right') enemy.x += 30;
-                    if (player.direction === 'left') enemy.x -= 30;
-                    if (player.direction === 'up') enemy.y -= 30;
-                    if (player.direction === 'down') enemy.y += 30;
+                    if (player.direction === 'right') enemy.x += 35;
+                    if (player.direction === 'left') enemy.x -= 35;
+                    if (player.direction === 'up') enemy.y -= 35;
+                    if (player.direction === 'down') enemy.y += 35;
 
                     if (enemy.hp <= 0) {
                         enemies.splice(i, 1);
@@ -239,14 +249,13 @@
             document.getElementById("buy-dmg-btn").disabled = player.gold < dmgCost;
         }
 
-        // Här ritar vi spelet
         function gameLoop() {
             if (gameOver) return;
 
-            // 1. Rensa skärmen
+            // 1. Rensa rutan
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Flytta gubben baserat på knappar
+            // 2. Kolla rörelse
             if (keys["KeyW"] || keys["ArrowUp"]) { player.y -= player.speed; player.direction = 'up'; }
             if (keys["KeyS"] || keys["ArrowDown"]) { player.y += player.speed; player.direction = 'down'; }
             if (keys["KeyA"] || keys["ArrowLeft"]) { player.x -= player.speed; player.direction = 'left'; }
@@ -255,24 +264,19 @@
             player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
             player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
-            // 3. Hantera fiender
+            // 3. Hantera fienderna
             spawnEnemies();
             
             enemies.forEach((enemy, index) => {
-                // Gå mot spelaren
                 let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
                 enemy.x += Math.cos(angle) * enemy.speed;
                 enemy.y += Math.sin(angle) * enemy.speed;
 
-                // RITA FIENDE (Ett rött monster med ögon)
+                // RITA FIENDE
                 ctx.fillStyle = "#a62c2c";
                 ctx.beginPath();
                 ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
                 ctx.fill();
-                // Ögon på monstret
+                
+                // Ögon
                 ctx.fillStyle = "#fff";
-                ctx.fillRect(enemy.x - 4, enemy.y - 5, 3, 3);
-                ctx.fillRect(enemy.x + 2, enemy.y - 5, 3, 3);
-
-                // Fiendens livmätare
-                ctx.fillStyle = "red";
