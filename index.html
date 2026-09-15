@@ -4,38 +4,251 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Warhammer 40k Datasheet Search</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* --- DESIGN (CSS) --- */
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #262626;
+            padding: 30px;
+            border: 2px solid #4d4d4d;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            color: #d1a119;
+            text-align: center;
+            border-bottom: 2px solid #d1a119;
+            padding-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin: 25px 0;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            background: #111;
+            border: 1px solid #4d4d4d;
+            color: #fff;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #d1a119;
+            color: #1a1a1a;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #f0be36;
+        }
+
+        /* Stats-tabell */
+        .stats-table, .weapon-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stats-table th, .stats-table td, 
+        .weapon-table th, .weapon-table td {
+            border: 1px solid #4d4d4d;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .stats-table th, .weapon-table th {
+            background-color: #333;
+            color: #d1a119;
+        }
+
+        .datasheet {
+            background: #1f1f1f;
+            padding: 20px;
+            border-left: 5px solid #d1a119;
+            margin-top: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .points-tag {
+            float: right;
+            background: #d1a119;
+            color: #000;
+            padding: 3px 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .section-title {
+            color: #d1a119;
+            margin-top: 15px;
+            border-bottom: 1px solid #4d4d4d;
+            padding-bottom: 5px;
+        }
+
+        .error {
+            color: #ff4d4d;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
 
-    <!-- Header / Logotyp -->
-    <header class="wh-header">
+    <div class="container">
         <h1>40K DATASHEET ARCHIVE</h1>
-        <p>Knappa in en enhet för att hämta poäng, stats, förmågor och vapenprofiler.</p>
-    </header>
+        <p style="text-align: center; color: #aaa;">Skriv in en enhet för att hämta stats (Testa: <i>Intercessor Squad</i> eller <i>Space Marine Captain</i>)</p>
 
-    <!-- Söksektion -->
-    <main class="search-container">
+        <!-- Sökfält -->
         <div class="search-box">
-            <input type="text" id="unitSearch" placeholder="Exempel: Intercessor Squad, Space Marine Captain...">
-            <button id="searchBtn">Sök Enhet</button>
+            <input type="text" id="unitSearch" placeholder="Skriv enhetsnamn här...">
+            <button onclick="searchUnit()">Sök</button>
         </div>
 
-        <!-- Resultat-område (Här laddas datan dynamiskt via JavaScript) -->
-        <section id="resultArea" class="result-area">
-            <!-- Startmeddelande innan man har sökt -->
-            <div class="placeholder-text">
-                <p>Väntar på order från Imperiet... Ange en enhet ovan för att scanna databanken.</p>
-            </div>
-        </section>
-    </main>
+        <!-- Här visas resultatet -->
+        <div id="resultArea">
+            <p style="text-align: center; color: #666;">Väntar på sökning...</p>
+        </div>
+    </div>
 
-    <!-- Sidfot -->
-    <footer>
-        <p>Detta är ett hobbyprojekt och är inte officiellt associerat med Games Workshop.</p>
-    </footer>
+    <script>
+        // --- DATABASEN (Här kan du lägga till fler gubbar sen!) ---
+        const warhammerDatabase = [
+            {
+                name: "Intercessor Squad",
+                points: "80 pts (5 models)",
+                stats: { M: '6"', T: "4", SV: "3+", W: "2", LD: "6+", OC: "2" },
+                abilities: "Objective Secured: If you control an objective marker at the end of your Command phase, that objective marker remains under your control.",
+                weapons: [
+                    { name: "Bolt rifle", range: '24"', A: "2", BS: "3+", S: "4", AP: "0", D: "1" },
+                    { name: "Close combat weapon", range: "Melee", A: "3", BS: "3+", S: "4", AP: "0", D: "1" }
+                ]
+            },
+            {
+                name: "Space Marine Captain",
+                points: "80 pts",
+                stats: { M: '6"', T: "4", SV: "2+", W: "5", LD: "6+", OC: "1" },
+                abilities: "Rites of Battle: Once per battle round, one unit from your army can be targeted with a Stratagem for 0CP. Finest Hour: Once per battle, this model gets +3 Attacks.",
+                weapons: [
+                    { name: "Bolt Pistol", range: '12"', A: "1", BS: "2+", S: "4", AP: "0", D: "1" },
+                    { name: "Master-crafted power weapon", range: "Melee", A: "6", BS: "2+", S: "5", AP: "-2", D: "2" }
+                ]
+            }
+        ];
 
-    <!-- JavaScript-länk som styr sökfunktionen -->
-    <script src="app.js"></script>
+        // --- SÖKLOGIKEN (JavaScript) ---
+        function searchUnit() {
+            const searchInput = document.getElementById("unitSearch").value.trim().toLowerCase();
+            const resultArea = document.getElementById("resultArea");
+
+            if (searchInput === "") {
+                resultArea.innerHTML = "<p class='error'>Du måste skriva något först!</p>";
+                return;
+            }
+
+            // Letar efter enheten i vår databas
+            const foundUnit = warhammerDatabase.find(unit => unit.name.toLowerCase() === searchInput);
+
+            if (foundUnit) {
+                // Bygger upp HTML-strukturen för gubben
+                let weaponRows = "";
+                foundUnit.weapons.forEach(w => {
+                    weaponRows += `
+                        <tr>
+                            <td>${w.name}</td>
+                            <td>${w.range}</td>
+                            <td>${w.A}</td>
+                            <td>${w.BS}</td>
+                            <td>${w.S}</td>
+                            <td>${w.AP}</td>
+                            <td>${w.D}</td>
+                        </tr>
+                    `;
+                });
+
+                resultArea.innerHTML = `
+                    <div class="datasheet">
+                        <span class="points-tag">${foundUnit.points}</span>
+                        <h2>${foundUnit.name}</h2>
+                        
+                        <!-- Grundstats -->
+                        <table class="stats-table">
+                            <tr>
+                                <th>M</th>
+                                <th>T</th>
+                                <th>SV</th>
+                                <th>W</th>
+                                <th>LD</th>
+                                <th>OC</th>
+                            </tr>
+                            <tr>
+                                <td>${foundUnit.stats.M}</td>
+                                <td>${foundUnit.stats.T}</td>
+                                <td>${foundUnit.stats.SV}</td>
+                                <td>${foundUnit.stats.W}</td>
+                                <td>${foundUnit.stats.LD}</td>
+                                <td>${foundUnit.stats.OC}</td>
+                            </tr>
+                        </table>
+
+                        <!-- Abilities -->
+                        <h3 class="section-title">Abilities</h3>
+                        <p>${foundUnit.abilities}</p>
+
+                        <!-- Weapons -->
+                        <h3 class="section-title">Weapons</h3>
+                        <table class="weapon-table">
+                            <tr>
+                                <th>Weapon Name</th>
+                                <th>Range</th>
+                                <th>A</th>
+                                <th>BS/WS</th>
+                                <th>S</th>
+                                <th>AP</th>
+                                <th>D</th>
+                            </tr>
+                            ${weaponRows}
+                        </table>
+                    </div>
+                `;
+            } else {
+                resultArea.innerHTML = "<p class='error'>Kunde inte hitta enheten. Kontrollera stavningen (t.ex. 'Intercessor Squad').</p>";
+            }
+        }
+
+        // Gör så att man kan trycka på "Enter" för att söka
+        document.getElementById("unitSearch").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                searchUnit();
+            }
+        });
+    </script>
+
 </body>
 </html>
