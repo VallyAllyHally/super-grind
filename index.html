@@ -2,294 +2,159 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Escape</title>
+    <title>Enkelt Klick Spel</title>
     <style>
-        body {
-            background-color: #111;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            user-select: none;
-        }
-        .game-container {
-            max-width: 550px;
-            margin: 0 auto;
-            background-color: #222;
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px solid #444;
-        }
-        .top-bar {
-            display: flex;
-            justify-content: space-around;
-            background-color: #333;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        /* Spelplanen - Mörk grotta */
-        #map {
-            width: 500px;
-            height: 400px;
-            background-color: #2c3e50;
-            border: 4px solid #7f8c8d;
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden;
-            border-radius: 5px;
-        }
-        /* SPELAREN (Gubben) */
-        #player {
-            width: 30px;
-            height: 30px;
-            position: absolute;
-            font-size: 26px;
-            line-height: 30px;
-            text-align: center;
-            z-index: 10;
-        }
-        /* SVÄRDETS TRÄFFOMRÅDE (Visas som en ljusblå ring runt gubben när han slår) */
-        #sword-slash {
-            width: 80px;
-            height: 80px;
-            border: 3px solid #00d2ff;
-            background-color: rgba(0, 210, 255, 0.2);
-            border-radius: 50%;
-            position: absolute;
-            display: none;
-            z-index: 9;
-            transform: translate(-25px, -25px); /* Centrera runt gubben */
-        }
-        /* MONSTER (Slimes) */
-        .slime {
-            width: 26px;
-            height: 26px;
-            position: absolute;
-            font-size: 22px;
-            line-height: 26px;
-            text-align: center;
-            z-index: 5;
-        }
-        /* NYCKLAR */
-        .key {
-            width: 25px;
-            height: 25px;
-            position: absolute;
-            font-size: 20px;
-            line-height: 25px;
-            z-index: 4;
-            animation: bounce 0.5s infinite alternate;
-        }
-        /* UTGÅNGEN (Porten) */
-        #door {
-            width: 40px;
-            height: 40px;
-            position: absolute;
-            top: 10px;
-            left: 230px;
-            font-size: 32px;
-            line-height: 40px;
-            z-index: 3;
-            background-color: #34495e;
-            border-radius: 5px;
-        }
-        @keyframes bounce {
-            from { transform: translateY(0); }
-            to { transform: translateY(-5px); }
-        }
-        /* SKÄRMAR */
-        .screen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 100;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .btn {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 15px;
-        }
+        body { background-color: #222; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
+        .box { max-width: 500px; margin: 0 auto; background: #333; padding: 20px; border-radius: 8px; }
+        
+        /* Spelplanen */
+        #bana { width: 100%; height: 200px; background: #4caf50; border-bottom: 15px solid #6d4c41; position: relative; overflow: hidden; }
+        
+        /* Gubben */
+        #gubbe { position: absolute; bottom: 0px; left: 50px; font-size: 30px; width: 40px; height: 40px; }
+        
+        /* Monster och skott */
+        .slime { position: absolute; bottom: 0px; font-size: 30px; width: 40px; height: 40px; }
+        .skott { position: absolute; bottom: 15px; width: 12px; height: 12px; background: yellow; border-radius: 50%; }
+        
+        /* Knappar */
+        .knapp { background: #ff9800; color: #fff; border: none; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .knapp:active { background: #e68a00; }
+        .styr-knapp { background: #2196f3; width: 100px; }
+        .skjut-knapp { background: #e91e63; width: 120px; }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <h2>🗝️ Grott-Smitaren (Dungeon Escape)</h2>
-        
-        <div class="top-bar">
-            <div>❤️ Liv: <span id="hp-text">5</span>/5</div>
-            <div>🔑 Nycklar: <span id="key-text">0</span>/3</div>
+    <div class="box">
+        <h2>⚔️ Klick-Försvar ⚔️</h2>
+        <p>❤️ Liv: <span id="liv">100</span> | 💰 Guld: <span id="pengar">0</span></p>
+
+        <div id="bana">
+            <div id="gubbe">🧑‍🌾</div>
         </div>
 
-        <div id="map">
-            <!-- Porten ut -->
-            <div id="door">🚪</div>
-            
-            <!-- Spelaren och hans svärds-ring -->
-            <div id="player">
-                🧑‍🌾
-                <div id="sword-slash"></div>
-            </div>
+        <!-- STARTKNAPP -->
+        <button class="knapp" style="width:90%; background:#4caf50;" onclick="startaVag()">👾 STARTA FIENDERNA</button>
 
-            <!-- Game Over Skärm -->
-            <div id="game-over-screen" class="screen">
-                <h1 style="color: #c0392b; margin: 0;">💀 GAME OVER</h1>
-                <p>Monstren tog dig!</p>
-                <button class="btn" onclick="location.reload()" style="background-color: #c0392b;">Försök igen</button>
-            </div>
-
-            <!-- Vinst Skärm -->
-            <div id="win-screen" class="screen">
-                <h1 style="color: #f1c40f; margin: 0;">🎉 DU VANN!</h1>
-                <p>Du samlade alla nycklar och flydde grottan!</p>
-                <button class="btn" onclick="location.reload()">Spela igen</button>
-            </div>
+        <!-- STYRNING (Bara vanliga knappar man klickar på) -->
+        <div style="margin-top: 15px;">
+            <button class="knapp styr-knapp" onclick="gaVanster()">◀ VÄNSTER</button>
+            <button class="knapp skjut-knapp" onclick="skjut()">💥 SKJUT!</button>
+            <button class="knapp styr-knapp" onclick="gaHoger()">HÖGER ▶</button>
         </div>
-
-        <p style="color: #888; font-size: 0.9rem; margin-top: 15px;">
-            🕹️ <strong>Styrning:</strong> Använd <strong>Piltangenterna</strong> eller <strong>WASD</strong> för att gå runt.<br>
-            ⚔️ <strong>Attack:</strong> Du svingar ditt svärd automatiskt i en cirkel runt dig hela tiden!
-        </p>
     </div>
 
     <script>
-        // Spelinställningar
-        let pX = 235, pY = 300; // Starta nere i mitten
-        let pHp = 5;
-        let keysFound = 0;
-        let isDead = false;
-        let hasWon = false;
+        let x = 50;
+        let hp = 100;
+        let guld = 0;
+        let monsterLista = [];
+        let skottLista = [];
 
-        let slimes = [];
-        let items = [];
-        let activeKeys = {};
-        let swordActive = false;
-        let swordTimer = 0;
+        const bana = document.getElementById('bana');
+        const gubbe = document.getElementById('gubbe');
 
-        const playerEl = document.getElementById('player');
-        const swordEl = document.getElementById('sword-slash');
-        const mapEl = document.getElementById('map');
+        // Funktioner för att flytta gubben
+        function gaVanster() {
+            x -= 30;
+            if (x < 0) x = 0;
+            gubbe.style.left = x + 'px';
+        }
 
-        // Lyssna på tangentbordet
-        window.addEventListener('keydown', (e) => { 
-            activeKeys[e.code] = true; 
-            if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-        });
-        window.addEventListener('keyup', (e) => { activeKeys[e.code] = false; });
+        function gaHoger() {
+            x += 30;
+            let maxFast = bana.clientWidth - 40;
+            if (x > maxFast) x = maxFast;
+            gubbe.style.left = x + 'px';
+        }
 
-        // Skapa 3 guldnycklar på slumpmässiga ställen
-        function spawnKeys() {
-            for (let i = 0; i < 3; i++) {
-                let kEl = document.createElement('div');
-                kEl.className = 'key';
-                kEl.innerText = '🔑';
+        // Funktion för att skjuta ett skott rakt framåt
+        function skjut() {
+            let sEl = document.createElement('div');
+            sEl.className = 'skott';
+            
+            let sX = x + 30;
+            sEl.style.left = sX + 'px';
+            bana.appendChild(sEl);
+
+            skottLista.push({ el: sEl, x: sX });
+        }
+
+        // Starta monstren manuellt
+        function startaVag() {
+            // Skapa 4 slimes utanför skärmen till höger
+            for (let i = 0; i < 4; i++) {
+                let mEl = document.createElement('div');
+                mEl.className = 'slime';
+                mEl.innerText = '🤢';
                 
-                let kX = Math.random() * 440 + 30;
-                let kY = Math.random() * 240 + 100; // Håll dem borta från dörren i början
-                
-                kEl.style.left = kX + 'px';
-                kEl.style.top = kY + 'px';
-                mapEl.appendChild(kEl);
+                let mX = bana.clientWidth + (i * 80);
+                mEl.style.left = mX + 'px';
+                bana.appendChild(mEl);
 
-                items.push({ el: kEl, x: kX, y: kY });
+                monsterLista.push({ el: mEl, x: mX });
             }
         }
 
-        // Skapa ett nytt monster (Slime)
-        function spawnSlime() {
-            if (isDead || hasWon || slimes.length >= 6) return;
+        // Spelloop som flyttar skott och monster (Inget avancerat)
+        function rullaSpel() {
+            if (hp <= 0) return;
 
-            let sEl = document.createElement('div');
-            sEl.className = 'slime';
-            sEl.innerText = '🤢';
+            // 1. Flytta skott till höger
+            for (let i = skottLista.length - 1; i >= 0; i--) {
+                let s = skottLista[i];
+                s.x += 7;
+                s.el.style.left = s.x + 'px';
 
-            // Spawnar på sidorna
-            let sX = Math.random() > 0.5 ? 10 : 460;
-            let sY = Math.random() * 300 + 50;
-
-            sEl.style.left = sX + 'px';
-            sEl.style.top = sY + 'px';
-            mapEl.appendChild(sEl);
-
-            slimes.push({ el: sEl, x: sX, y: sY, speed: 1 + Math.random() * 0.8 });
-        }
-
-        // HUVUDLOOPEN (60 Frames per sekund)
-        function gameLoop() {
-            if (isDead || hasWon) return;
-
-            // 1. GÅ (Flytta gubben)
-            let speed = 3.5;
-            if (activeKeys['KeyW'] || activeKeys['ArrowUp']) pY -= speed;
-            if (activeKeys['KeyS'] || activeKeys['ArrowDown']) pY += speed;
-            if (activeKeys['KeyA'] || activeKeys['ArrowLeft']) pX -= speed;
-            if (activeKeys['KeyD'] || activeKeys['ArrowRight']) pX += speed;
-
-            // Håll gubben inom grottans väggar
-            pX = Math.max(10, Math.min(460, pX));
-            pY = Math.max(10, Math.min(360, pY));
-
-            playerEl.style.left = pX + 'px';
-            playerEl.style.top = pY + 'px';
-
-            // 2. AUTOMATISKT SVÄRD-SVING (Varje 1.2 sekund)
-            swordTimer++;
-            if (swordTimer % 75 === 0) {
-                swordActive = true;
-                swordEl.style.display = 'block';
-                
-                // Kolla om svärds-cirkeln träffar monster
-                for (let i = slimes.length - 1; i >= 0; i--) {
-                    let s = slimes[i];
-                    // Avstånd från spelarens mitt till monstret
-                    let dist = Math.hypot((pX + 15) - (s.x + 13), (pY + 15) - (s.y + 13));
-                    if (dist < 55) { // Inom svärdets räckvidd
+                // Kolla om skottet träffar en slime
+                for (let j = monsterLista.length - 1; j >= 0; j--) {
+                    let m = monsterLista[j];
+                    if (Math.abs(s.x - m.x) < 25) {
+                        // Träff! Ta bort båda
                         s.el.remove();
-                        slimes.splice(i, 1);
+                        skottLista.splice(i, 1);
+                        
+                        m.el.remove();
+                        monsterLista.splice(j, 1);
+                        
+                        guld += 5;
+                        document.getElementById('pengar').innerText = guld;
+                        break;
                     }
                 }
 
-                // Göm svärds-ringen efter en kort stund
-                setTimeout(() => {
-                    swordEl.style.display = 'none';
-                    swordActive = false;
-                }, 200);
+                // Ta bort skott utanför skärmen
+                if (s.x > bana.clientWidth) {
+                    s.el.remove();
+                    skottLista.splice(i, 1);
+                }
             }
 
-            // 3. HANTERA MONSTER (Slimes)
-            slimes.forEach((s, index) => {
-                // Monstren går direkt mot spelaren
-                let angle = Math.atan2(pY - s.y, pX - s.x);
-                s.x += Math.cos(angle) * s.speed;
-                s.y += Math.sin(angle) * s.speed;
+            // 2. Flytta monster till vänster
+            for (let i = monsterLista.length - 1; i >= 0; i--) {
+                let m = monsterLista[i];
+                m.x -= 1.5;
+                m.el.style.left = m.x + 'px';
 
-                s.el.style.left = s.x + 'px';
-                s.el.style.top = s.y + 'px';
+                // Om monstret når vänsterkanten
+                if (m.x <= 0) {
+                    hp -= 25;
+                    document.getElementById('liv').innerText = Math.max(0, hp);
+                    m.el.remove();
+                    monsterLista.splice(i, 1);
 
-                // Kolla om monstret biter gubben
-                let dist = Math.hypot((pX + 15) - (s.x + 13), (pY + 15) - (s.y + 13));
-                if (dist < 22 && !swordActive) {
-                    pHp--;
-                    document.getElementById('hp-text').innerText = pHp;
-                    
-                    // Knuffa bort monstret lite så man inte dör direkt
-                    s.x -= Math.cos(angle) * 40;
-                    s.y -= Math.sin(angle) * 40;
+                    if (hp <= 0) {
+                        alert("GAME OVER! Uppdatera sidan för att köra igen.");
+                    }
+                }
+            }
 
-                    if (pHp <= 0) {
-                        isDead = true;
+            requestAnimationFrame(rullaSpel);
+        }
+
+        // Kör loopen
+        rullaSpel();
+    </script>
+</body>
+</html>
