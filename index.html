@@ -2,243 +2,40 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>3D Monster Hunter</title>
-    <style>
-        body {
-            background-color: #111;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 10px;
-            overflow: hidden;
-        }
-        .container {
-            max-width: 620px;
-            margin: 0 auto;
-            background: #222;
-            padding: 15px;
-            border-radius: 8px;
-        }
-        /* 3D-Skärmen */
-        canvas {
-            background: #000;
-            border: 4px solid #444;
-            display: block;
-            margin: 10px auto;
-            border-radius: 4px;
-        }
-        .stats {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #ffcc00;
-        }
-        .controls {
-            color: #aaa;
-            font-size: 0.85rem;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warhammer 40k Datasheet Search</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="container">
-    <h2>⚔️ 3D Slime Labyrint ⚔️</h2>
-    <div class="stats">💰 Poäng: <span id="score">0</span></div>
-    
-    <!-- Här ritas 3D-världen ut -->
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
-    
-    <div class="controls">
-        <p>🕹️ <strong>Gå & Titta:</strong> <kbd>W</kbd>/<kbd>S</kbd> (Framåt/Bakåt) | <kbd>A</kbd>/<kbd>D</kbd> (Vrid kameran till vänster/höger)</p>
-        <p>🎯 <strong>Skjut:</strong> Tryck på <kbd>Mellanslag (Space)</kbd> när en Slime är i siktet!</p>
-    </div>
-</div>
+    <!-- Header / Logotyp -->
+    <header class="wh-header">
+        <h1>40K DATASHEET ARCHIVE</h1>
+        <p>Knappa in en enhet för att hämta poäng, stats, förmågor och vapenprofiler.</p>
+    </header>
 
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+    <!-- Söksektion -->
+    <main class="search-container">
+        <div class="search-box">
+            <input type="text" id="unitSearch" placeholder="Exempel: Intercessor Squad, Space Marine Captain...">
+            <button id="searchBtn">Sök Enhet</button>
+        </div>
 
-    // 1 = Vägg, 0 = Gåbar mark
-    const map = [
-        [1,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,0,1],
-        [1,0,1,1,0,1,0,1],
-        [1,0,1,0,0,1,0,1],
-        [1,0,0,0,0,0,0,1],
-        [1,0,1,0,1,1,0,1],
-        [1,0,0,0,0,0,0,1],
-        [1,1,1,1,1,1,1,1]
-    ];
-    const mapSize = 8;
+        <!-- Resultat-område (Här laddas datan dynamiskt via JavaScript) -->
+        <section id="resultArea" class="result-area">
+            <!-- Startmeddelande innan man har sökt -->
+            <div class="placeholder-text">
+                <p>Väntar på order från Imperiet... Ange en enhet ovan för att scanna databanken.</p>
+            </div>
+        </section>
+    </main>
 
-    // Spelarens position och vinkel (i radianer)
-    let pX = 2.5, pY = 2.5, pAngle = 0;
-    let score = 0;
+    <!-- Sidfot -->
+    <footer>
+        <p>Detta är ett hobbyprojekt och är inte officiellt associerat med Games Workshop.</p>
+    </footer>
 
-    // Fiende (Slime)
-    let slime = { x: 5.5, y: 4.5, active: true };
-
-    // Tangenter
-    let keys = {};
-    window.addEventListener("keydown", (e) => { 
-        keys[e.code] = true; 
-        if(e.code === "Space") shoot();
-        if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
-    });
-    window.addEventListener("keyup", (e) => { keys[e.code] = false; });
-
-    // Skjut-logik
-    function shoot() {
-        if (!slime.active) return;
-        
-        // Räkna ut vinkeln till monstret
-        let dX = slime.x - pX;
-        let dY = slime.y - pY;
-        let angleToSlime = Math.atan2(dY, dX);
-        
-        // Jämför med spelarens sikte
-        let diff = pAngle - angleToSlime;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-
-        // Om monstret är hyfsat nära mitten av skärmen (siktet)
-        if (Math.abs(diff) < 0.2) {
-            score += 10;
-            document.getElementById("score").innerText = score;
-            slime.active = false;
-            
-            // Flytta monstret till ett nytt ställe efter 1.5 sekunder
-            setTimeout(() => {
-                slime.x = Math.random() * 5 + 1.5;
-                slime.y = Math.random() * 5 + 1.5;
-                slime.active = true;
-            }, 1500);
-        }
-    }
-
-    // 3D-Rundritning (Raycasting-motor)
-    function render3D() {
-        // 1. Rita tak och golv
-        ctx.fillStyle = "#222"; // Mörkt tak
-        ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-        ctx.fillStyle = "#333"; // Grått golv
-        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
-
-        const fov = Math.PI / 3; // Synfält (60 grader)
-        const numRays = canvas.width;
-        const halfFov = fov / 2;
-
-        // Skicka ut strålar för varje vertikal linje på skärmen
-        for (let i = 0; i < numRays; i++) {
-            let rayAngle = pAngle - halfFov + (i / numRays) * fov;
-            let distance = 0;
-            let hitWall = false;
-
-            let cos = Math.cos(rayAngle);
-            let sin = Math.sin(rayAngle);
-
-            while (!hitWall && distance < 16) {
-                distance += 0.05;
-                let checkX = Math.floor(pX + cos * distance);
-                let checkY = Math.floor(pY + sin * distance);
-
-                if (checkX < 0 || checkX >= mapSize || checkY < 0 || checkY >= mapSize) {
-                    hitWall = true;
-                    distance = 16;
-                } else if (map[checkY][checkX] > 0) {
-                    hitWall = true;
-                }
-            }
-
-            // Fixa "fiskögon-effekt"
-            let correctedDist = distance * Math.cos(rayAngle - pAngle);
-            let wallHeight = Math.min(canvas.height, (canvas.height / correctedDist));
-
-            // Skugga väggar baserat på avstånd (mörkare längre bort)
-            let colorVal = Math.max(20, 180 - correctedDist * 15);
-            ctx.strokeStyle = `rgb(${colorVal}, ${colorVal}, ${colorVal + 20})`;
-            
-            // Rita vägglinjen
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(i, (canvas.height - wallHeight) / 2);
-            ctx.lineTo(i, (canvas.height + wallHeight) / 2);
-            ctx.stroke();
-        }
-
-        // 2. RITA UT MONSTRET I 3D (Om det är vid liv)
-        if (slime.active) {
-            let dX = slime.x - pX;
-            let dY = slime.y - pY;
-            let spriteDist = Math.hypot(dX, dY);
-
-            let spriteAngle = Math.atan2(dY, dX) - pAngle;
-            while (spriteAngle < -Math.PI) spriteAngle += Math.PI * 2;
-            while (spriteAngle > Math.PI) spriteAngle -= Math.PI * 2;
-
-            // Om monstret är inom synfältet
-            if (Math.abs(spriteAngle) < fov) {
-                let spriteScreenSize = canvas.height / spriteDist;
-                let spriteX = (canvas.width / 2) + Math.tan(spriteAngle) * (canvas.width / 2) - spriteScreenSize / 2;
-                let spriteY = (canvas.height / 2) - spriteScreenSize / 4;
-
-                // Rita en grön Slime-boll med ögon
-                ctx.fillStyle = "#4caf50";
-                ctx.beginPath();
-                ctx.arc(spriteX + spriteScreenSize/2, spriteY + spriteScreenSize/2, spriteScreenSize/3, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Ögon på slimen
-                ctx.fillStyle = "#000";
-                ctx.fillRect(spriteX + spriteScreenSize/2 - 5, spriteY + spriteScreenSize/2 - 5, 4, 4);
-                ctx.fillRect(spriteX + spriteScreenSize/2 + 5, spriteY + spriteScreenSize/2 - 5, 4, 4);
-            }
-        }
-
-        // 3. RITA ETT SIKTE I MITTEN AV SKÄRMEN
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(canvas.width / 2 - 10, canvas.height / 2);
-        ctx.lineTo(canvas.width / 2 + 10, canvas.height / 2);
-        ctx.moveTo(canvas.width / 2, canvas.height / 2 - 10);
-        ctx.lineTo(canvas.width / 2, canvas.height / 2 + 10);
-        ctx.stroke();
-    }
-
-    // Spelloop för rörelser (60 FPS)
-    function gameLoop() {
-        let moveSpeed = 0.04;
-        let rotSpeed = 0.03;
-
-        // Sväng kameran (A / D)
-        if (keys["KeyA"] || keys["ArrowLeft"]) pAngle -= rotSpeed;
-        if (keys["KeyD"] || keys["ArrowRight"]) pAngle += rotSpeed;
-
-        // Gå framåt / Bakåt (W / S)
-        let nextX = pX;
-        let nextY = pY;
-        
-        if (keys["KeyW"] || keys["ArrowUp"]) {
-            nextX += Math.cos(pAngle) * moveSpeed;
-            nextY += Math.sin(pAngle) * moveSpeed;
-        }
-        if (keys["KeyS"] || keys["ArrowDown"]) {
-            nextX -= Math.cos(pAngle) * moveSpeed;
-            nextY -= Math.sin(pAngle) * moveSpeed;
-        }
-
-        // Enkel krock-koll mot väggar
-        if (map[Math.floor(pY)][Math.floor(nextX)] === 0) pX = nextX;
-        if (map[Math.floor(nextY)][Math.floor(pX)] === 0) pY = nextY;
-
-        render3D();
-        requestAnimationFrame(gameLoop);
-    }
-
-    // Starta direkt
-    gameLoop();
-</script>
+    <!-- JavaScript-länk som styr sökfunktionen -->
+    <script src="app.js"></script>
 </body>
 </html>
